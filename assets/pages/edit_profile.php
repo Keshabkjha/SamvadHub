@@ -42,21 +42,21 @@ if(isset($_GET['success'])){
                 <div class="d-flex gap-3 my-3">
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1"
-                            value="option1" <?=$user['gender']==1?'checked':''?> disabled>
+                            value="option1" <?=$user['gender']==1?'checked':''?>>
                         <label class="form-check-label" for="exampleRadios1">
                             Male
                         </label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios3"
-                            value="option2" <?=$user['gender']==2?'checked':''?> disabled>
+                            value="option2" <?=$user['gender']==2?'checked':''?>>
                         <label class="form-check-label" for="exampleRadios3">
                             Female
                         </label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios2"
-                            value="option2" <?=$user['gender']==0?'checked':''?> disabled>
+                            value="option2" <?=$user['gender']==0?'checked':''?>>
                         <label class="form-check-label" for="exampleRadios2">
                             Other
                         </label>
