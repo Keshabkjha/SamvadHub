@@ -62,7 +62,7 @@ jobs:
           fi
 
   docker-build:
-    name: Docker Build Test
+    name: Docker Build & Test Suite
     runs-on: ubuntu-latest
     needs: lint-and-validate
 
@@ -70,18 +70,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -t samvadhub:test .
-
-      - name: Test container starts
+      - name: Build and Start Containers
         run: |
-          docker run -d --name test_container \
-            -e DB_HOST=localhost \
-            -e DB_NAME=SamvadHub \
-            -e DB_USER=root \
-            -e DB_PASS='' \
-            -p 8080:80 \
-            samvadhub:test
-          sleep 5
-          docker ps | grep test_container
-          docker rm -f test_container
+          docker compose up -d --build
+
+      - name: Wait for DB Healthcheck
+        run: |
+          for i in {1..60}; do
+            if [ "$(docker inspect --format='{{.State.Health.Status}}' samvadhub_db)" = "healthy" ]; then
+              echo "✅ Database is healthy!"
+              exit 0
+            fi
+            echo "Waiting for database..."
+            sleep 2
+          done
+          echo "❌ Database healthcheck timed out!"
+          exit 1
+
+      - name: Run PHPUnit Test Suite
+        run: |
+          docker compose exec -T app ./vendor/bin/phpunit
+
+      - name: Shutdown Containers
+        if: always()
+        run: |
+          docker compose down
