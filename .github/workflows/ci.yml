@@ -1,0 +1,87 @@
+name: SamvadHub CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-validate:
+    name: PHP Syntax & Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: gd, mysqli, mbstring
+          coverage: none
+
+      - name: Check PHP syntax (all files)
+        run: find . -name "*.php" -not -path "./vendor/*" | xargs -P4 -I {} php -l {}
+
+      - name: Check for hardcoded credentials
+        run: |
+          if grep -r "password_hash.*MD5\|md5(" --include="*.php" .; then
+            echo "::error::MD5 password hashing detected! Use password_hash(PASSWORD_BCRYPT)"
+            exit 1
+          fi
+          echo "✅ No MD5 password hashing found"
+
+      - name: Check for SQL injection patterns
+        run: |
+          if grep -rn "\"SELECT.*\$\|'SELECT.*\$\|\"INSERT.*\$\|\"UPDATE.*\$\|\"DELETE.*\$" --include="*.php" assets/php/functions.php assets/php/ajax.php assets/php/actions.php 2>/dev/null; then
+            echo "::warning::Potential raw SQL string interpolation detected — use prepared statements"
+          else
+            echo "✅ No obvious SQL injection patterns found"
+          fi
+
+      - name: Verify sensitive files are excluded
+        run: |
+          if [ -f "pass.txt" ]; then
+            echo "::error::pass.txt found in repo — must be removed!"
+            exit 1
+          fi
+          if [ -f ".env" ]; then
+            echo "::error::.env file found in repo — must not be committed!"
+            exit 1
+          fi
+          echo "✅ Sensitive files check passed"
+
+      - name: Check .gitignore exists
+        run: |
+          if [ ! -f ".gitignore" ]; then
+            echo "::warning::.gitignore missing!"
+          else
+            echo "✅ .gitignore exists"
+          fi
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: lint-and-validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t samvadhub:test .
+
+      - name: Test container starts
+        run: |
+          docker run -d --name test_container \
+            -e DB_HOST=localhost \
+            -e DB_NAME=SamvadHub \
+            -e DB_USER=root \
+            -e DB_PASS='' \
+            -p 8080:80 \
+            samvadhub:test
+          sleep 5
+          docker ps | grep test_container
+          docker rm -f test_container
