@@ -16,26 +16,98 @@ function popchat(user_id) {
 }
 window.popchat = popchat;
 
+// Attachment preview helpers
+function resetChatAttachment() {
+    const fileInput = document.getElementById('chat_img_input');
+    if (fileInput) fileInput.value = '';
+    const previewContainer = document.getElementById('chat_img_preview_container');
+    if (previewContainer) previewContainer.style.display = 'none';
+    const previewImg = document.getElementById('chat_img_preview');
+    if (previewImg) previewImg.src = '';
+}
+window.resetChatAttachment = resetChatAttachment;
+
+$(document).on('click', '#attach_img_btn', function() {
+    const fileInput = document.getElementById('chat_img_input');
+    if (fileInput) fileInput.click();
+});
+
+$(document).on('change', '#chat_img_input', function() {
+    const file = this.files[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('File size must be less than 5MB.', 'error');
+            this.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewImg = document.getElementById('chat_img_preview');
+            const previewContainer = document.getElementById('chat_img_preview_container');
+            if (previewImg && previewContainer) {
+                previewImg.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+$(document).on('click', '#chat_img_clear', function() {
+    resetChatAttachment();
+});
+
 // Send message
 $(document).on('click', '#sendmsg', function() {
     const user_id = State.chattingUserId;
     const msg     = document.getElementById('msginput').value.trim();
-    if (!msg || !user_id) return;
+    const fileInput = document.getElementById('chat_img_input');
+    const hasFile = fileInput && fileInput.files && fileInput.files[0];
+    
+    if (!user_id) return;
+    if (!msg && !hasFile) return;
 
     $('#sendmsg').prop('disabled', true);
     $('#msginput').prop('disabled', true);
 
-    secureAjax(
-        '/api/message/send',
-        { user_id: user_id, msg: msg },
-        function(response) {
+    const formData = new FormData();
+    formData.append('user_id', user_id);
+    formData.append('msg', msg);
+    formData.append('csrf_token', getCSRFToken());
+    if (hasFile) {
+        formData.append('msg_img', fileInput.files[0]);
+    }
+
+    $.ajax({
+        url:      '/api/message/send',
+        method:   'post',
+        dataType: 'json',
+        data:     formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-Token': getCSRFToken()
+        },
+        success:  function(response) {
             $('#sendmsg').prop('disabled', false);
             $('#msginput').prop('disabled', false).val('').focus();
+            resetChatAttachment();
             if (!response.status) {
-                showToast('Could not send message. Please try again.', 'error');
+                showToast(response.error || 'Could not send message. Please try again.', 'error');
+            }
+        },
+        error: function(xhr) {
+            $('#sendmsg').prop('disabled', false);
+            $('#msginput').prop('disabled', false).focus();
+            if (xhr.status === 401) {
+                showToast('Session expired. Please log in again.', 'error');
+                setTimeout(() => { window.location.href = '/login'; }, 1500);
+            } else {
+                showToast('Something went wrong. Please try again.', 'error');
             }
         }
-    );
+    });
 });
 
 // Enter to send
@@ -199,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     chatModal.addEventListener('hidden.bs.modal', function() {
         State.chattingUserId = 0;
         State.chatOpen       = false;
+        resetChatAttachment();
     });
 
     // Start message polling (after a brief delay)

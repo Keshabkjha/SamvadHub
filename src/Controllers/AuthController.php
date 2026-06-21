@@ -250,7 +250,7 @@ class AuthController {
             $profilePicUrl = $payload['picture'] ?? '';
             $localProfilePic = 'default_profile.jpg';
             if (!empty($profilePicUrl)) {
-                $localProfilePic = $this->downloadGoogleProfilePic($profilePicUrl);
+                $localProfilePic = $this->downloadOAuthProfilePic($profilePicUrl);
             }
 
             // Create basic user
@@ -300,9 +300,206 @@ class AuthController {
     }
 
     /**
-     * Securely downloads Google's profile photo and stores it locally.
+     * GET /auth/github
      */
-    private function downloadGoogleProfilePic(string $url): string {
+    public function redirectToGithub(Request $request): void {
+        if (isset($_SESSION['Auth'])) {
+            Response::redirect('/');
+        }
+        
+        $clientId = $_ENV['GITHUB_CLIENT_ID'] ?? '';
+        if (empty($clientId)) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'GitHub OAuth Client ID is not configured in .env'];
+            Response::redirect('/login');
+        }
+        
+        $state = bin2hex(random_bytes(16));
+        $_SESSION['github_oauth_state'] = $state;
+        
+        $redirectUri = urlencode('http://' . $_SERVER['HTTP_HOST'] . '/api/auth/github/callback');
+        $githubUrl = "https://github.com/login/oauth/authorize?client_id={$clientId}&redirect_uri={$redirectUri}&scope=read:user%20user:email&state={$state}";
+        
+        Response::redirect($githubUrl);
+    }
+
+    /**
+     * GET /api/auth/github/callback
+     */
+    public function githubCallback(Request $request): void {
+        if (isset($_SESSION['Auth'])) {
+            Response::redirect('/');
+        }
+        
+        $state = $request->get('state', '');
+        $savedState = $_SESSION['github_oauth_state'] ?? '';
+        
+        if (empty($state) || empty($savedState) || !hash_equals($savedState, $state)) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'GitHub OAuth CSRF state verification failed.'];
+            Response::redirect('/login');
+        }
+        
+        unset($_SESSION['github_oauth_state']);
+        
+        $code = trim($request->get('code', ''));
+        if (empty($code)) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'GitHub OAuth code is missing.'];
+            Response::redirect('/login');
+        }
+        
+        $clientId = $_ENV['GITHUB_CLIENT_ID'] ?? '';
+        $clientSecret = $_ENV['GITHUB_CLIENT_SECRET'] ?? '';
+        
+        if (empty($clientId) || empty($clientSecret)) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'GitHub OAuth credentials are not configured in .env'];
+            Response::redirect('/login');
+        }
+        
+        // Exchange code for Access Token
+        $ch = curl_init('https://github.com/login/oauth/access_token');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
+            'code' => $code,
+            'state' => $state
+        ]));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        if (!$response) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'Failed to reach GitHub OAuth server.'];
+            Response::redirect('/login');
+        }
+        
+        $tokenData = json_decode($response, true);
+        $accessToken = $tokenData['access_token'] ?? '';
+        
+        if (empty($accessToken)) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'Failed to retrieve GitHub access token.'];
+            Response::redirect('/login');
+        }
+        
+        // Fetch User Profile
+        $ch = curl_init('https://api.github.com/user');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$accessToken}",
+            "User-Agent: SamvadHub-OAuth"
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $profileRes = curl_exec($ch);
+        curl_close($ch);
+        
+        if (!$profileRes) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'Failed to fetch GitHub profile.'];
+            Response::redirect('/login');
+        }
+        
+        $profile = json_decode($profileRes, true);
+        
+        // Fetch User Emails (to ensure we get the verified primary email)
+        $ch = curl_init('https://api.github.com/user/emails');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$accessToken}",
+            "User-Agent: SamvadHub-OAuth"
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $emailsRes = curl_exec($ch);
+        curl_close($ch);
+        
+        $email = '';
+        if ($emailsRes) {
+            $emails = json_decode($emailsRes, true);
+            if (is_array($emails)) {
+                foreach ($emails as $em) {
+                    if ($em['primary'] && $em['verified']) {
+                        $email = strtolower(trim($em['email']));
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Fallback to profile email if not found in list
+        if (empty($email) && !empty($profile['email'])) {
+            $email = strtolower(trim($profile['email']));
+        }
+        
+        if (empty($email)) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'Could not retrieve a verified primary email from GitHub.'];
+            Response::redirect('/login');
+        }
+        
+        $user = User::getByEmail($email);
+        
+        if (!$user) {
+            // Register a new user dynamically
+            $nameParts = explode(' ', $profile['name'] ?? 'GitHub User', 2);
+            $firstName = $nameParts[0] ?? 'User';
+            $lastName = $nameParts[1] ?? '';
+            
+            $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $profile['login'] ?? 'user'));
+            $username = $baseUsername;
+            while (User::isUsernameRegistered($username)) {
+                $username = $baseUsername . rand(100, 9999);
+            }
+            
+            $password = bin2hex(random_bytes(16));
+            $avatarUrl = $profile['avatar_url'] ?? '';
+            $localProfilePic = 'default_profile.jpg';
+            if (!empty($avatarUrl)) {
+                $localProfilePic = $this->downloadOAuthProfilePic($avatarUrl);
+            }
+            
+            $registered = User::create([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'gender' => 0,
+                'email' => $email,
+                'username' => $username,
+                'password' => $password
+            ]);
+            
+            if ($registered) {
+                $user = User::getByEmail($email);
+                if ($user) {
+                    DB::execute(
+                        "UPDATE users SET ac_status = 1, profile_pic = ? WHERE id = ?",
+                        'si', $localProfilePic, (int)$user['id']
+                    );
+                    $user = User::getByEmail($email);
+                }
+            } else {
+                $_SESSION['error'] = ['field' => 'general', 'msg' => 'Failed to register account via GitHub.'];
+                Response::redirect('/login');
+            }
+        }
+        
+        if ((int)$user['ac_status'] === 3) {
+            Response::redirect('/login?deleted');
+        }
+        if ((int)$user['ac_status'] === 2) {
+            $_SESSION['error'] = ['field' => 'general', 'msg' => 'Your account is suspended by the administrator.'];
+            Response::redirect('/login');
+        }
+        
+        session_regenerate_id(true);
+        $_SESSION['Auth'] = true;
+        $_SESSION['userdata'] = $user;
+        Response::redirect('/');
+    }
+
+    /**
+     * Securely downloads Google's or GitHub's profile photo and stores it locally.
+     */
+    private function downloadOAuthProfilePic(string $url): string {
         $default = 'default_profile.jpg';
         
         $parsed = parse_url($url);
@@ -311,7 +508,7 @@ class AuthController {
         }
         
         $host = $parsed['host'] ?? '';
-        if (!str_ends_with($host, 'googleusercontent.com')) {
+        if (!str_ends_with($host, 'googleusercontent.com') && !str_ends_with($host, 'githubusercontent.com')) {
             return $default;
         }
         
@@ -321,6 +518,7 @@ class AuthController {
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         curl_setopt($ch, CURLOPT_MAXFILESIZE, 2 * 1024 * 1024); // 2MB max
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
         $data = curl_exec($ch);
         $info = curl_getinfo($ch);
         curl_close($ch);

@@ -120,4 +120,63 @@ class UserTest extends DatabaseTestCase {
         ]);
         $this->assertTrue($authResult['status']);
     }
+
+    public function testUpdateProfileWithBase64CroppedImage() {
+        // Create user
+        $email = 'cropuser' . rand(1000, 9999) . '@example.com';
+        $username = 'cropusername' . rand(1000, 9999);
+        $password = 'crop_password123';
+
+        $data = [
+            'first_name' => 'Charlie',
+            'last_name' => 'Brown',
+            'gender' => 1,
+            'email' => $email,
+            'username' => $username,
+            'password' => $password
+        ];
+
+        User::create($data);
+        $createdUser = User::getByEmail($email);
+        $this->assertNotEmpty($createdUser);
+
+        // Set session user ID to mock a logged-in user
+        $_SESSION['userdata'] = $createdUser;
+
+        // Base64 transparent 1x1 PNG image
+        $base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        $updateData = [
+            'first_name' => 'CharlieUpdated',
+            'last_name' => 'BrownUpdated',
+            'username' => $username . '_up',
+            'bio' => 'A happy kid.',
+            'website' => 'https://charliebrown.com',
+            'cropped_image_base64' => $base64Image
+        ];
+
+        // Call updateProfile
+        $status = User::updateProfile($updateData, []);
+        $this->assertTrue($status);
+
+        // Fetch updated user from DB
+        $updatedUser = User::getById((int)$createdUser['id']);
+        $this->assertEquals('CharlieUpdated', $updatedUser['first_name']);
+        $this->assertEquals('BrownUpdated', $updatedUser['last_name']);
+        $this->assertEquals($username . '_up', $updatedUser['username']);
+        $this->assertEquals('A happy kid.', $updatedUser['bio']);
+        $this->assertEquals('https://charliebrown.com', $updatedUser['website']);
+
+        // Check if the uploaded image file exists and delete it
+        $uploadedFile = dirname(__DIR__, 2) . '/public/assets/images/profile/' . $updatedUser['profile_pic'];
+        $this->assertFileExists($uploadedFile);
+        
+        // Clean up the uploaded image
+        if (file_exists($uploadedFile)) {
+            unlink($uploadedFile);
+        }
+
+        // Clean up session
+        unset($_SESSION['userdata']);
+    }
 }

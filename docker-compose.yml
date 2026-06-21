@@ -27,6 +27,7 @@ services:
       # Persist user uploads
       - uploads:/var/www/html/public/assets/images/posts
       - profile_pics:/var/www/html/public/assets/images/profile
+      - message_attachments:/var/www/html/public/assets/images/messages
     restart: unless-stopped
     networks:
       - samvadhub_net
@@ -59,6 +60,7 @@ volumes:
   db_data:
   uploads:
   profile_pics:
+  message_attachments:
 
 networks:
   samvadhub_net:

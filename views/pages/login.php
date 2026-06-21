@@ -89,6 +89,13 @@
                 </div>
             </div>
 
+            <!-- GitHub Sign-in Button -->
+            <div class="d-flex justify-content-center mb-3">
+                <a href="/auth/github" class="btn btn-dark d-flex align-items-center justify-content-center" style="text-decoration:none; background:#24292e; border-color:#24292e; color:#fff; width:320px; height:40px; font-weight:600; border-radius:4px; font-size:14px;">
+                    <i class="bi bi-github me-2" style="font-size:16px;"></i>Sign in with GitHub
+                </a>
+            </div>
+
             <a href="/signup" class="btn btn-outline-primary btn-full" style="text-decoration:none; justify-content:center;">
                 Create a new account
             </a>

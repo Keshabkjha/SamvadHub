@@ -161,7 +161,14 @@ class User {
             : $current['password'];
 
         $pic = $current['profile_pic'];
-        if (!empty($img['name'])) {
+        if (!empty($data['cropped_image_base64'])) {
+            $upload = ImageHelper::handleBase64Upload($data['cropped_image_base64'], 'profile', 500);
+            if (!$upload['status']) {
+                $_SESSION['error'] = ['field' => 'profile_pic', 'msg' => $upload['error']];
+                return false;
+            }
+            $pic = $upload['filename'];
+        } elseif (!empty($img['name'])) {
             $upload = ImageHelper::handleUpload($img, 'profile', 500);
             if (!$upload['status']) {
                 $_SESSION['error'] = ['field' => 'profile_pic', 'msg' => $upload['error']];

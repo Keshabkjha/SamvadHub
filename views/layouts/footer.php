@@ -163,12 +163,23 @@
                         <i class="bi bi-x-octagon-fill me-2"></i>You can no longer message this user.
                     </div>
                 </div>
-                <div class="d-flex gap-2 p-3" id="msgsender">
+                <!-- Image attachment preview container -->
+                <div id="chat_img_preview_container" style="display:none; padding:10px 16px; border-bottom: 1px solid var(--border-light); background:var(--bg-input); position:relative;">
+                    <div style="position:relative; display:inline-block;">
+                        <img id="chat_img_preview" style="max-height:70px; border-radius:6px;" alt="Upload preview">
+                        <button type="button" id="chat_img_clear" class="btn-close" style="position:absolute; top:-6px; right:-6px; font-size:8px; background:var(--bg-card); border-radius:50%; padding:6px; box-shadow:0 1px 3px rgba(0,0,0,0.2);" aria-label="Clear image"></button>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 p-3" id="msgsender">
+                    <input type="file" id="chat_img_input" accept="image/*" style="display:none;">
+                    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" id="attach_img_btn" type="button" style="width:36px; height:36px; border-radius:50%;" aria-label="Attach image">
+                        <i class="bi bi-paperclip" style="font-size:16px;"></i>
+                    </button>
                     <input type="text" class="comment-input" id="msginput"
                            placeholder="Type a message…" maxlength="2000"
-                           style="flex:1;" autocomplete="off">
-                    <button class="btn btn-primary btn-sm" id="sendmsg" type="button" data-user-id="0">
-                        <i class="bi bi-send-fill"></i>
+                           style="flex:1; height:36px;" autocomplete="off">
+                    <button class="btn btn-primary btn-sm d-flex align-items-center justify-content-center" id="sendmsg" type="button" data-user-id="0" style="width:36px; height:36px; border-radius:50%;">
+                        <i class="bi bi-send-fill" style="font-size:14px;"></i>
                     </button>
                 </div>
             </div>

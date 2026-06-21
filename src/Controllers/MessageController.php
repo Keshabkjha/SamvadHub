@@ -16,15 +16,29 @@ class MessageController {
         requireAuth();
         $userId = (int)$request->post('user_id', 0);
         $msg    = trim($request->post('msg', ''));
-
-        if ($userId <= 0 || empty($msg)) {
+        $image  = $request->file('msg_img');
+        
+        if ($userId <= 0) {
             Response::json(['status' => false, 'error' => 'Invalid request.']);
+        }
+        if (empty($msg) && (!$image || $image['error'] === UPLOAD_ERR_NO_FILE)) {
+            Response::json(['status' => false, 'error' => 'Please enter a message or select an image.']);
         }
         if (Social::checkBS($userId)) {
             Response::json(['status' => false, 'error' => 'You cannot message this user.']);
         }
 
-        $status = Message::send($userId, $msg);
+        $msgImg = null;
+        if ($image && $image['error'] === UPLOAD_ERR_OK) {
+            $upload = \App\Helpers\ImageHelper::handleUpload($image, 'messages', 800);
+            if ($upload['status']) {
+                $msgImg = $upload['filename'];
+            } else {
+                Response::json(['status' => false, 'error' => $upload['error']]);
+            }
+        }
+
+        $status = Message::send($userId, $msg, $msgImg);
         Response::json(['status' => $status]);
     }
 
@@ -73,8 +87,24 @@ class MessageController {
             foreach ($messages as $cm) {
                 $is_own = (int)$cm['from_user_id'] === User::currentId();
                 $cl1 = $is_own ? 'msg-bubble own' : 'msg-bubble other';
+                
+                $imgHtml = '';
+                if (!empty($cm['msg_img'])) {
+                    $imgHtml = '<div class="msg-media mt-1 mb-1">'
+                             . '<img src="/assets/images/messages/' . e($cm['msg_img']) . '" '
+                             . 'style="max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer; display: block;" '
+                             . 'onclick="window.open(this.src)">'
+                             . '</div>';
+                }
+                
+                $msgText = '';
+                if (!empty($cm['msg'])) {
+                    $msgText = '<span class="msg-text">' . e($cm['msg']) . '</span>';
+                }
+
                 $chatmsg .= '<div class="' . $cl1 . '">'
-                    . '<span class="msg-text">' . e($cm['msg']) . '</span>'
+                    . $imgHtml
+                    . $msgText
                     . '<span class="msg-time">' . e(gettime($cm['created_at'])) . '</span>'
                     . '</div>';
             }

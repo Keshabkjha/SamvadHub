@@ -49,7 +49,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN composer install --no-interaction --optimize-autoloader
 
 # Ensure upload directories exist and are writable
-RUN mkdir -p public/assets/images/posts public/assets/images/profile \
+RUN mkdir -p public/assets/images/posts public/assets/images/profile public/assets/images/messages \
     && chown -R www-data:www-data public/assets/images \
     && chmod -R 755 public/assets/images
 

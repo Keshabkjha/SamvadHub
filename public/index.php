@@ -92,6 +92,8 @@ $router->post('/reset-password', [\App\Controllers\AuthController::class, 'reset
 $router->post('/verify-email', [\App\Controllers\AuthController::class, 'verifyEmail']);
 $router->get('/resend-verification', [\App\Controllers\AuthController::class, 'resendVerification']);
 $router->post('/api/auth/google', [\App\Controllers\AuthController::class, 'googleLogin']);
+$router->get('/auth/github', [\App\Controllers\AuthController::class, 'redirectToGithub']);
+$router->get('/api/auth/github/callback', [\App\Controllers\AuthController::class, 'githubCallback']);
 
 // App / Post Routes
 $router->get('/', [\App\Controllers\PostController::class, 'index']);

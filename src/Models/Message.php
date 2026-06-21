@@ -45,14 +45,15 @@ class Message {
     /**
      * Send a message to a user.
      */
-    public static function send(int $userId, string $msg): bool {
+    public static function send(int $userId, string $msg, ?string $msgImg = null): bool {
         $uid = User::currentId();
         $msg = trim($msg);
-        if (empty($msg) || strlen($msg) > 2000) return false;
+        if (empty($msg) && empty($msgImg)) return false;
+        if (strlen($msg) > 2000) return false;
 
         return DB::execute(
-            "INSERT INTO messages (from_user_id, to_user_id, msg) VALUES (?, ?, ?)",
-            'iis', $uid, $userId, $msg
+            "INSERT INTO messages (from_user_id, to_user_id, msg, msg_img) VALUES (?, ?, ?, ?)",
+            'iiss', $uid, $userId, $msg, $msgImg
         );
     }
 

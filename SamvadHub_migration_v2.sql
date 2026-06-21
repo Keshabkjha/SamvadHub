@@ -104,5 +104,8 @@ ALTER TABLE `users`
 ALTER TABLE `notifications` 
     MODIFY COLUMN `post_id` int(11) NOT NULL DEFAULT 0;
 
+-- ─── 8. Add media support to messages table ─────────────────────────────
+ALTER TABLE `messages` ADD COLUMN `msg_img` VARCHAR(255) DEFAULT NULL;
+
 -- ─── Done ─────────────────────────────────────────────────────────────────────
 SELECT 'Migration completed successfully!' AS status;
