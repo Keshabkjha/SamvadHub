@@ -250,7 +250,7 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
   `password` text NOT NULL,
-  `profile_pic` text NOT NULL DEFAULT 'default_profile.jpg',
+  `profile_pic` varchar(255) NOT NULL DEFAULT 'default_profile.jpg',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `ac_status` int(11) NOT NULL COMMENT '0=not verified,1=active,2=blocked'
@@ -375,7 +375,3 @@ ALTER TABLE `posts`
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

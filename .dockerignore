@@ -1,0 +1,14 @@
+# Exclude secrets and credential files from docker context
+.git
+.github
+.env
+config/*.json
+pass.txt
+Dockerfile
+docker-compose.yml
+*.sql
+vendor/
+composer.lock
+.idea/
+.vscode/
+node_modules/

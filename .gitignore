@@ -1,0 +1,35 @@
+# Environment / Credentials
+.env
+pass.txt
+*.txt
+config/*.json
+
+# Composer
+vendor/
+composer.lock
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Upload directories (do not track user uploads)
+public/assets/images/posts/*
+public/assets/images/profile/*
+!public/assets/images/posts/.gitkeep
+!public/assets/images/profile/.gitkeep
+!public/assets/images/profile/default_profile.jpg
+
+# PHP cache
+*.cache

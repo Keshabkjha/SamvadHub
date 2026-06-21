@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: samvadhub_app
+    ports:
+      - "8081:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-SamvadHub}
+      DB_USER: ${DB_USER:-samvadhub}
+      DB_PASS: ${DB_PASS:-changeme}
+      APP_ENV: ${APP_ENV:-development}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-SamvadHub}
+    volumes:
+      # Persist user uploads
+      - uploads:/var/www/html/public/assets/images/posts
+      - profile_pics:/var/www/html/public/assets/images/profile
+    restart: unless-stopped
+    networks:
+      - samvadhub_net
+
+  db:
+    image: mysql:8.0
+    container_name: samvadhub_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-SamvadHub}
+      MYSQL_USER: ${DB_USER:-samvadhub}
+      MYSQL_PASSWORD: ${DB_PASS:-changeme}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./SamvadHub.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./SamvadHub_migration_v2.sql:/docker-entrypoint-initdb.d/02_migration.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - samvadhub_net
+
+volumes:
+  db_data:
+  uploads:
+  profile_pics:
+
+networks:
+  samvadhub_net:
+    driver: bridge

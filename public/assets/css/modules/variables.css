@@ -1,0 +1,78 @@
+/* ─── Google Fonts ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ─── Design Tokens ─────────────────────────────────────────────── */
+:root {
+    /* Brand Colors */
+    --brand-primary:      #6C47FF;
+    --brand-secondary:    #A855F7;
+    --brand-gradient:     linear-gradient(135deg, #6C47FF 0%, #A855F7 100%);
+    --brand-light:        #F0EAFF;
+    --brand-dark:         #4C2FCC;
+
+    /* Neutrals */
+    --bg-page:            #F2F0FF;
+    --bg-card:            #FFFFFF;
+    --bg-sidebar:         #FFFFFF;
+    --bg-input:           #F8F7FF;
+    --border-color:       #E8E4F8;
+    --border-light:       #F3F0FF;
+
+    /* Text */
+    --text-primary:       #1A1030;
+    --text-secondary:     #6B6080;
+    --text-muted:         #9E94B8;
+    --text-link:          #6C47FF;
+    --text-inverse:       #FFFFFF;
+
+    /* Status */
+    --color-success:      #10B981;
+    --color-danger:       #EF4444;
+    --color-warning:      #F59E0B;
+    --color-info:         #3B82F6;
+
+    /* Shadows */
+    --shadow-sm:          0 1px 3px rgba(108, 71, 255, 0.08);
+    --shadow-md:          0 4px 16px rgba(108, 71, 255, 0.12);
+    --shadow-lg:          0 8px 32px rgba(108, 71, 255, 0.16);
+    --shadow-card:        0 2px 12px rgba(108, 71, 255, 0.08);
+
+    /* Spacing */
+    --radius-sm:          8px;
+    --radius-md:          12px;
+    --radius-lg:          16px;
+    --radius-xl:          24px;
+    --radius-full:        9999px;
+
+    /* Animation */
+    --transition-fast:    0.15s ease;
+    --transition-base:    0.25s ease;
+    --transition-slow:    0.4s ease;
+
+    /* Typography */
+    --font-family:        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-size-xs:       0.75rem;
+    --font-size-sm:       0.875rem;
+    --font-size-base:     1rem;
+    --font-size-lg:       1.125rem;
+    --font-size-xl:       1.25rem;
+
+    /* Navbar height */
+    --navbar-height:      64px;
+    --mobile-nav-height:  64px;
+}
+
+/* ─── Dark Mode ─────────────────────────────────────────────────── */
+[data-theme="dark"] {
+    --bg-page:            #0D0A1A;
+    --bg-card:            #1A1530;
+    --bg-sidebar:         #1A1530;
+    --bg-input:           #251E40;
+    --border-color:       #2E2650;
+    --border-light:       #241E3D;
+    --text-primary:       #F0EAFF;
+    --text-secondary:     #A89EC4;
+    --text-muted:         #6A5F8A;
+    --shadow-card:        0 2px 12px rgba(0, 0, 0, 0.4);
+    --shadow-md:          0 4px 16px rgba(0, 0, 0, 0.4);
+}
